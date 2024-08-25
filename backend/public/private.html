@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private</title>
+</head>
+<body>
+    <h1>This is secret page </h1>
+    <p>this page will be available only if a user has successfully loged in </p>
+    <form action="/logout" method="get">
+        <button type="submit">Log out</button>
+    </form>
+    <br>
+    <button onclick={startGame()}>start</button>
+    <br>
+    <input type="text" id="cancelInput">
+    <button onclick={makeMove()}>Make Move</button>
+
+    <script>
+        // Connect to the WebSocket server
+        const socket = new WebSocket('ws://localhost:8080');
+
+        socket.onopen = () => {
+            console.log('Connected to WebSocket server');
+            socket.send(JSON.stringify({type:"connect_game"}))
+        };
+
+        socket.onmessage = (event) => {
+            console.log('Message from server:', event.data);
+        };
+
+        socket.onclose = () => {
+            console.log('Disconnected from WebSocket server');
+        };
+
+        function startGame() {
+            socket.send(JSON.stringify({type:"init_game"}));
+        }
+
+        function makeMove() {
+            const cancelInput = document.getElementById("cancelInput")
+            socket.send(JSON.stringify({
+                type: "cancel_number",
+                number: Number(cancelInput.value)
+            }))
+        }
+    </script>
+</body>
+</html>
