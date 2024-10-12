@@ -17,13 +17,19 @@ import { addUser, exitGame } from "./gameManager.js";
 
 const app = express();
 
+const CLIENT_URL = "http://localhost:5173"
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename);
 
 app.use(express.static(path.join(__dirname, "public")));
 
 dotenv.config();
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    methodName: "GET, POST, PUT, DELTE",
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,7 +40,8 @@ const sessionMiddleware = session({
     saveUninitialized: true,
     cookie: {
         secure: false,
-        maxAge: 1000 * 60 * 60 * 24
+        maxAge: 1000 * 60 * 60 * 24,
+        sameSite: 'lax'
     }
 });
 // temp
@@ -74,7 +81,7 @@ app.get("/auth/google", passport.authenticate("google", {
 }))
 
 app.get("/auth/google/private", passport.authenticate("google", {
-    successRedirect: "/private",
+    successRedirect: CLIENT_URL,
     failureRedirect: "/login"
 }))
 
@@ -103,7 +110,7 @@ app.post("/register",async function(req,res){
 
 //LOGIN USER
 app.post("/login", passport.authenticate("local", {
-    successRedirect: "/private",
+    successRedirect: CLIENT_URL,
     failureRedirect: "/login"
 }))
 
@@ -111,18 +118,22 @@ app.post("/login", passport.authenticate("local", {
 // Private route only available when used has logged in 
 app.get("/private", (req, res) => {
     if(req.isAuthenticated()){
-        console.log(req.user)
-        return res.status(200).sendFile(path.join(__dirname, 'public', "private.html"))
+        res.status(200).json(req.user);
     } else {
-        return res.redirect("/login")
+        res.status(403).json(null);
     }
 })
 
 // Route to handle logout
 app.get('/logout', (req, res) => {
     req.logout((err) => {
-        if(err) console.log(err)
-        res.redirect("/")
+        if (err) {
+            return res.status(500).send('Logout failed');
+        }
+        req.session.destroy(() => {
+            res.clearCookie('connect.sid', { path: '/', httpOnly: true, secure: false, sameSite: 'lax' });
+            return res.status(200).send('Logged out successfully');
+        });
     })
 });
 
@@ -226,7 +237,6 @@ wss.on('connection', async function connection(ws, req) {
         passport.initialize()(req, res, () => {
             passport.session()(req, res, () => {
                 if (req.user) {
-                    console.log('User authenticated:', req.user);
                     addUser(req.user._id, ws)
 
                     ws.send('Welcome, ' + req.user.username);
@@ -235,7 +245,9 @@ wss.on('connection', async function connection(ws, req) {
                     })
                 } else {
                     console.log('User not authenticated');
-                    ws.send('You are not authenticated');
+                    ws.send(JSON.stringify({
+                        message: 'You are not authenticated'
+                    }));
                 }
             });
         });

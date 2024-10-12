@@ -13,9 +13,13 @@ export async function addUser(userId, socket) {
     if(!currentUser){
         currentUser = new SocketUser(userId, socket);
         usersList.push(currentUser);
+    } else {
+        currentUser.socket = socket;
     }
     socket.on("message", async (data) => {
         const message = JSON.parse(data.toString());
+
+        console.log("message recieved :" + message)
         
         if(message.type === "connect_game"){
             const gameDb = await Game.findOne({
@@ -37,7 +41,9 @@ export async function addUser(userId, socket) {
                     }))
                 }
             } else {
-                currentUser.socket.send("no game found start a new game");
+                currentUser.socket.send(JSON.stringify({
+                    message:"no game found start a new game"
+                }));
             }
         }
         if(message.type === "init_game"){
