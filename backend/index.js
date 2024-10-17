@@ -241,6 +241,7 @@ wss.on('connection', async function connection(ws, req) {
 
                     ws.send('Welcome, ' + req.user.username);
                     ws.on("close", () => {
+                        console.log("socket closing")
                         exitGame(req.user._id, ws);
                     })
                 } else {

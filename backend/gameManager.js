@@ -4,12 +4,14 @@ import Bingo from "bingo-master";
 let pendingUser = null;
 let usersList = []
 let games = []
+let aliveSockets = []
 export async function chekUser(userId, socket){
 
 }
 
 export async function addUser(userId, socket) {
     let currentUser = usersList.find((user) => user.userId === userId)
+    aliveSockets.push(socket)
     if(!currentUser){
         currentUser = new SocketUser(userId, socket);
         usersList.push(currentUser);
@@ -31,13 +33,15 @@ export async function addUser(userId, socket) {
             if(gameDb){
                 if(userId == gameDb.playerWhiteId) {
                     currentUser.socket.send(JSON.stringify({
-                        board: gameDb.playerWhiteBoard,
-                        canceledNumbers: gameDb.canceledNumbers
+                        board: boardDetails(gameDb.playerWhiteBoard, gameDb.canceledNumbers),
+                        turn: gameDb.turn,
+                        id: "w"
                     }))
                 } else {
                     currentUser.socket.send(JSON.stringify({
-                        board: gameDb.playerBlackBoard,
-                        canceledNumbers: gameDb.canceledNumbers
+                        board: boardDetails(gameDb.playerBlackBoard, gameDb.canceledNumbers),
+                        turn: gameDb.turn,
+                        id: "b"
                     }))
                 }
             } else {
@@ -72,12 +76,14 @@ export async function addUser(userId, socket) {
                 const player1 = usersList.find((user) => user.userId === bingoGame.playerWhiteId)
                 const player2 = usersList.find((user) => user.userId === bingoGame.playerBlackId)
                 player1.socket.send(JSON.stringify({
-                    board: bingoGame.playerWhiteBoard,
-                    canceledNumbers: bingoGame.canceledNumbers
+                    board: boardDetails(bingoGame.playerWhiteBoard, bingoGame.canceledNumbers),
+                    turn: bingoGame.turn,
+                    id: "w"
                 }))
                 player2.socket.send(JSON.stringify({
-                    board: bingoGame.playerBlackBoard,
-                    canceledNumbers: bingoGame.canceledNumbers
+                    board: boardDetails(bingoGame.playerBlackBoard, bingoGame.canceledNumbers),
+                    turn: bingoGame.turn,
+                    id: "b"
                 }))
                 pendingUser = null;
             } else {
@@ -96,15 +102,21 @@ export async function addUser(userId, socket) {
          
             // chek is this the users turn 
             if(userId == bingoGame.playerWhiteId && bingoGame.canceledNumbers.length % 2 == 1){
-                currentUser.socket.send("Its not your turn")
+                currentUser.socket.send(JSON.stringify({
+                    message: "Its not your turn"
+                }))
                 return;
             }
             if(userId == bingoGame.playerBlackId && bingoGame.canceledNumbers.length % 2 == 0){
-                currentUser.socket.send("Its not your turn")
+                currentUser.socket.send(JSON.stringify({
+                    message: "Its not your turn"
+                }))
                 return;
             }
             if(bingoGame.canceledNumbers.includes(message.number) || (message.number > 25 && message.number < 1)){
-                currentUser.socket.send("Invalid move number is alredy canceled")
+                currentUser.socket.send(JSON.stringify({
+                    message: "Invalid move can't cancel the number"
+                }))
                 return;
             }
             // cancelNumber 
@@ -116,23 +128,33 @@ export async function addUser(userId, socket) {
             if(bingoGame.winner){
                 gameDb.winner = bingoGame.winner
                 player1.socket.send(JSON.stringify({
+                    board: boardDetails(bingoGame.playerWhiteBoard, bingoGame.canceledNumbers),
+                    turn: bingoGame.turn,
+                    id: "w",
                     winner: bingoGame.winner,
-                    canceledNumbers: bingoGame.canceledNumbers
+                    message: bingoGame.winner == "w" ? "You win the game" : "You loos the game"
                 }))
                 player2.socket.send(JSON.stringify({
+                    board: boardDetails(bingoGame.playerBlackBoard, bingoGame.canceledNumbers),
+                    turn: bingoGame.turn,
+                    id: "b",
                     winner: bingoGame.winner,
-                    canceledNumbers: bingoGame.canceledNumbers
+                    message: bingoGame.winner == "b" ? "You win the game" : "You loos the game"
                 }))
                 await gameDb.deleteOne();
-                usersList = usersList.filter((user) => user.userId === bingoGame.playerWhiteId || user.userId === bingoGame.playerBlackId)
-                games = games.filter((game) => game == bingoGame)
+                usersList = usersList.filter((user) => user.userId !== bingoGame.playerWhiteId || user.userId !== bingoGame.playerBlackId)
+                games = games.filter((game) => game !== bingoGame)
                 return;
             }
             player1.socket.send(JSON.stringify({
-                canceledNumbers: bingoGame.canceledNumbers
+                board: boardDetails(bingoGame.playerWhiteBoard, bingoGame.canceledNumbers),
+                turn: bingoGame.turn,
+                id: "w"
             }))
             player2.socket.send(JSON.stringify({
-                canceledNumbers: bingoGame.canceledNumbers
+                board: boardDetails(bingoGame.playerBlackBoard, bingoGame.canceledNumbers),
+                turn: bingoGame.turn,
+                id: "b"
             }))
             gameDb.canceledNumbers.push(message.number);
             gameDb.whiteBingoCount = bingoGame.whiteBingoCount;
@@ -171,8 +193,8 @@ export async function addUser(userId, socket) {
                 }))
             }
             await gameDb.deleteOne();
-            usersList = usersList.filter((user) => user.userId === bingoGame.playerWhiteId || user.userId === bingoGame.playerBlackId)
-            games = games.filter((game) => game == bingoGame)
+            usersList = usersList.filter((user) => user.userId !== bingoGame.playerWhiteId || user.userId !== bingoGame.playerBlackId)
+            games = games.filter((game) => game != bingoGame)
             return;
 
         }
@@ -180,8 +202,10 @@ export async function addUser(userId, socket) {
 }
 
 export async function exitGame(userId, socket) {
+    aliveSockets = aliveSockets.filter((s) => s != socket);
     const game = games.find((game)=> game.playerWhiteId === userId || game.playerBlackId === userId)
     const cUser = usersList.find((user) => user.userId == userId)
+    console.log("game found :" + game)
     if(game){
         let player1 = null;
         let player2 = null;
@@ -192,8 +216,8 @@ export async function exitGame(userId, socket) {
             player1 = cUser;
             player2 = usersList.find((user) => user.userId == game.playerWhiteId)
         }
-    
-        player2.socket.on("close", async () => {
+        if(!aliveSockets.includes(player2.socket)){
+            console.log("second socket disconected")
             const dbGame = await Game.deleteOne({
                 $or:[
                     {playerWhiteId : userId},
@@ -202,7 +226,8 @@ export async function exitGame(userId, socket) {
             })
             usersList = usersList.filter((user) => user.userId !== player1.userId || user.userId !== player2.userId)
             games = games.filter((game) => game.playerWhiteId !== userId || game.playerBlackId !== userId);
-        })
+            return;
+        }
     }
 }
 class SocketUser {
@@ -254,6 +279,69 @@ class BGame {
     getTurn() {
         return this.bingo.turn
     }
+}
+
+// board detail
+export function boardDetails(board, canceled){
+    let resBoard = [];
+    let count = 0;
+    for (let i = 0; i < 5; i++) {
+        resBoard.push([]);
+        for (let j = 0; j < 5; j++) {
+            resBoard[i].push({
+                val: board[i][j],
+                isCanceled: canceled.includes(board[i][j]),
+                isRow: false,
+                isCol: false,
+                isDig1: false,
+                isDig2: false
+            })
+        }
+    }
+    let canceledRows = [];
+    let canceledCols = [];
+    let canceledDig = [];
+    for (let i = 0; i < 5; i++) {
+        let rowCanceled = true;
+        let columnCanceled = true;
+        for (let j = 0; j < 5; j++) {
+            if (!canceled.includes(board[i][j])) {
+                rowCanceled = false;
+            }
+            if (!canceled.includes(board[j][i])) {
+                columnCanceled = false;
+            }
+        }
+        if (rowCanceled) canceledRows.push(i);
+        if (columnCanceled) canceledCols.push(i);
+    }
+
+    let diagonal1Canceled = true;
+    let diagonal2Canceled = true;
+    for (let i = 0; i < 5; i++) {
+        if (!canceled.includes(board[i][i])) {
+            diagonal1Canceled = false;
+        }
+        if (!canceled.includes(board[i][4 - i])) {
+            diagonal2Canceled = false;
+        }
+    }
+    if (diagonal1Canceled) canceledDig.push(1);
+    if (diagonal2Canceled) canceledDig.push(2);
+
+    for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 5; j++) {
+            if(canceledRows.includes(i)) resBoard[i][j].isRow = true;
+            if(canceledCols.includes(j)) resBoard[i][j].isCol = true;
+            if(i == j && canceledDig.includes(1)) resBoard[i][j].isDig1 = true;
+            if(i + j == 4 && canceledDig.includes(2)) resBoard[i][j].isDig2 = true;
+        }
+    }
+    count = canceledRows.length + canceledCols.length + canceledDig.length;
+    return {
+        resBoard: resBoard,
+        count: count
+    };
 }
 
 
