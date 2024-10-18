@@ -1,5 +1,9 @@
 {
   "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "build": "npm run build"
+  },
   "dependencies": {
     "bcrypt": "^5.1.1",
     "bingo-master": "^1.1.0",
