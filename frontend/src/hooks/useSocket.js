@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-
-const WS_URL = "ws://localhost:8080";
+import { WEB_SOCKET_URL } from "../utils/messages";
 
 export const useSocket = () => {
     const [socket, setSocket] = useState(null);
 
     useEffect( () => {
-        const ws = new WebSocket(WS_URL);
+        const ws = new WebSocket(WEB_SOCKET_URL);
         ws.onopen = () => {
             setSocket(ws)
             console.log("socket connected")

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import axios from "axios"
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import { SERVER_URL } from '../utils/messages';
 
 
 function Home() {
@@ -21,7 +22,7 @@ function Home() {
 
   useEffect(() => {
     const getUser = async ()=> {
-      const res = await axios.get("http://localhost:8080/private" , { withCredentials: true })
+      const res = await axios.get(SERVER_URL + "private" , { withCredentials: true })
       setUser(res.data);
     }
     getUser();

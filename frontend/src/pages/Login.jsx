@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useUser } from '../context/UserContext'
 import { Link, useNavigate } from 'react-router-dom';
-import FloatingMatrix from '../components/animations/FloatingMatrix';
+import { SERVER_URL } from '../utils/messages';
 
 function Login() {
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ function Login() {
             <div>{user?.email}</div>
           </form>
           <div className='p-4 w-[80%] min-w-[340px]'>
-            <Link to="http://localhost:8080/auth/google">
+            <Link to={SERVER_URL + "auth/google"}>
             <button 
               className=' w-full px-4 py-[6px] bg-white  font-bold text-center text-lg rounded-md flex items-center justify-center gap-4 hover:bg-gray-200'
             >

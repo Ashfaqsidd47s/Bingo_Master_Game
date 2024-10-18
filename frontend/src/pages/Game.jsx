@@ -6,6 +6,7 @@ import { useSocket } from '../hooks/useSocket';
 import StartGame from '../components/StartGame';
 import { useBoard, useGameOver } from '../hooks/useBoard';
 import GameOver from '../components/dialougBoxs/GameOver';
+import { SERVER_URL } from '../utils/messages';
 
 
 function Game() {
@@ -20,7 +21,7 @@ function Game() {
 
   const logOut = async ()=>{
     try {
-      const res = await axios.get("http://localhost:8080/logout" , { withCredentials: true });
+      const res = await axios.get(SERVER_URL + "logout" , { withCredentials: true });
       setUser(null);
       updateBoard(null);
       console.log(res.data)
