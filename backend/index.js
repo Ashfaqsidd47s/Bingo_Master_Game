@@ -82,7 +82,7 @@ app.get("/auth/google", passport.authenticate("google", {
 }))
 
 app.get("/auth/google/private", passport.authenticate("google", {
-    successRedirect: CLIENT_URL,
+    successRedirect: process.env.CLIENT_URL,
     failureRedirect: "/login"
 }))
 
@@ -111,7 +111,7 @@ app.post("/register",async function(req,res){
 
 //LOGIN USER
 app.post("/login", passport.authenticate("local", {
-    successRedirect: CLIENT_URL,
+    successRedirect: process.env.CLIENT_URL,
     failureRedirect: "/login"
 }))
 
@@ -162,7 +162,7 @@ passport.use("local", new Strategy(async function verify(username, password, cb)
 passport.use("google", new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:8080/auth/google/private",
+    callbackURL: process.env.SERVER_URL + "auth/google/private",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 }, async (accessToken, refreshToken, profile, cb) => {
     try {
