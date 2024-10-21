@@ -132,7 +132,7 @@ app.get('/logout', (req, res) => {
             return res.status(500).send('Logout failed');
         }
         req.session.destroy(() => {
-            res.clearCookie('connect.sid', { path: '/', httpOnly: true, secure: false, sameSite: 'lax' });
+            res.clearCookie('connect.sid', { path: '/', httpOnly: false, secure: true, sameSite: 'lax' });
             return res.status(200).send('Logged out successfully');
         });
     })
@@ -162,7 +162,7 @@ passport.use("local", new Strategy(async function verify(username, password, cb)
 passport.use("google", new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.SERVER_URL + "auth/google/private",
+    callbackURL: process.env.SERVER_URL + "/auth/google/private",
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
 }, async (accessToken, refreshToken, profile, cb) => {
     try {
