@@ -38,11 +38,11 @@ const CLIENT_URL = process.env.CLIENT_URL
 const sessionMiddleware = session({
     secret: process.env.MY_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
         secure: true,
         maxAge: 1000 * 60 * 60 * 24,
-        sameSite: 'none'
+        sameSite: 'None'
     }
 });
 // temp
