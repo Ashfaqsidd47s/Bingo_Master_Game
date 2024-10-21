@@ -36,11 +36,11 @@ const CLIENT_URL = process.env.CLIENT_URL
 
 // temp code 
 const sessionMiddleware = session({
-    secret: "this is top secret",
+    secret: process.env.MY_SECRET,
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: false,
+        secure: true,
         maxAge: 1000 * 60 * 60 * 24,
         sameSite: 'lax'
     }
