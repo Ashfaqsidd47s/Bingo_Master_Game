@@ -26,7 +26,7 @@ app.use(express.static(path.join(__dirname, "public")));
 dotenv.config();
 app.use(cors({
     origin: process.env.CLIENT_URL,
-    methodName: "GET, POST, PUT, DELTE",
+    methodName: "GET, POST, PUT, DELETE",
     credentials: true
 }));
 app.use(express.json());
@@ -42,7 +42,7 @@ const sessionMiddleware = session({
     cookie: {
         secure: true,
         maxAge: 1000 * 60 * 60 * 24,
-        sameSite: 'None'
+        sameSite: 'none'
     }
 });
 // temp
