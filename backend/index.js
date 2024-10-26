@@ -41,7 +41,7 @@ const sessionMiddleware = session({
     saveUninitialized: false,
     cookie: {
         secure: true,
-        httpOnly: false,
+        httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24,
         sameSite: 'None'
     }
@@ -125,6 +125,19 @@ app.get("/private", (req, res) => {
         res.status(403).json(null);
     }
 })
+
+// Test route to set a cookie
+app.get('/test', (req, res) => {
+    // Set a cookie with specific options
+    res.cookie('testCookie', 'thisIsATest', {
+      httpOnly: true, // Prevent JavaScript access
+      secure: true,   // Only sent over HTTPS
+      sameSite: 'none', // Allows cross-site requests
+      maxAge: 24 * 60 * 60 * 1000, // 1 day expiration
+    });
+  
+    res.send('Cookie has been set!');
+  });
 
 // Route to handle logout
 app.get('/logout', (req, res) => {
