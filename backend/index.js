@@ -41,6 +41,7 @@ const sessionMiddleware = session({
     saveUninitialized: false,
     cookie: {
         secure: true,
+        httpOnly: false,
         maxAge: 1000 * 60 * 60 * 24,
         sameSite: 'none'
     }
