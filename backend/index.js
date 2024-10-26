@@ -40,10 +40,10 @@ const sessionMiddleware = session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: true,
-        httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24,
-        sameSite: 'None'
+        httpOnly: true, // Prevent JavaScript access
+        secure: true,   // Only sent over HTTPS
+        sameSite: 'none', // Allows cross-site requests
+        maxAge: 24 * 60 * 60 * 1000,
     }
 });
 // temp
