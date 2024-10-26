@@ -43,7 +43,7 @@ const sessionMiddleware = session({
         secure: true,
         httpOnly: false,
         maxAge: 1000 * 60 * 60 * 24,
-        sameSite: 'none'
+        sameSite: 'None'
     }
 });
 // temp
