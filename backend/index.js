@@ -127,16 +127,16 @@ app.get("/private", (req, res) => {
 })
 
 // Test route to set a cookie
+
+let testObjects = []
 app.get('/test', (req, res) => {
-    // Set a cookie with specific options
-    res.cookie('testCookie', 'thisIsATest', {
-      httpOnly: true, // Prevent JavaScript access
-      secure: true,   // Only sent over HTTPS
-      sameSite: 'none', // Allows cross-site requests
-      maxAge: 24 * 60 * 60 * 1000, // 1 day expiration
-    });
-  
-    res.send('Cookie has been set!');
+    
+    testObjects.push({
+        id: testObjects.length + 1,
+        data: testObjects.length + 1
+    })
+
+    res.json(testObjects);
   });
 
 // Route to handle logout
