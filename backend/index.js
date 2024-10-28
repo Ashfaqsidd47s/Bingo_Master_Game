@@ -112,10 +112,7 @@ app.get("/auth/google/private", passport.authenticate("google", { session: false
 // PRIVATE ROUTE 
 app.get("/private", authenticateJWT,  (req, res) => {
     
-    res.json({
-        message: 'Protected route accessed',
-        user: req.user 
-    });
+    res.json(req.user);
 })
 
 
