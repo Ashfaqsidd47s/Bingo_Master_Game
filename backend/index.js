@@ -128,15 +128,10 @@ app.get("/private", (req, res) => {
 
 // Test route to set a cookie
 
-let testObjects = []
 app.get('/test', (req, res) => {
     
-    testObjects.push({
-        id: testObjects.length + 1,
-        data: testObjects.length + 1
-    })
-
-    res.json(testObjects);
+ 
+    res.json("test working fine");
   });
 
 // Route to handle logout
