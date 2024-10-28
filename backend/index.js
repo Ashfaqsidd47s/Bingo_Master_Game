@@ -118,7 +118,7 @@ app.get("/private", authenticateJWT,  (req, res) => {
 
 
 // LOGOUT ROUTE 
-app.post('/logout', (req, res) => {
+app.get('/logout', (req, res) => {
     res.clearCookie('token'); 
     res.json({ message: 'Logged out successfully' });
 });
