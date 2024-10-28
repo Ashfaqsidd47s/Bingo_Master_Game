@@ -1,14 +1,11 @@
 import express from "express";
 import mongoose from "mongoose";
-import cors from "cors";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
-import bcrypt from "bcrypt";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
 import User from "./models/User.js";
-import session from "express-session";
 import passport from "passport";
-import { Strategy } from "passport-local";
 import GoogleStrategy from "passport-google-oauth2";
 import { WebSocketServer } from "ws";
 import cookie from "cookie";
@@ -16,158 +13,58 @@ import { addUser, exitGame } from "./gameManager.js";
 
 
 const app = express();
-
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename);
-
-app.use(express.static(path.join(__dirname, "public")));
-
 dotenv.config();
+
+// INIITIAL MIDDLEWARES 
+app.use(express.json());
+app.use(cookieParser());
 app.use(cors({
     origin: process.env.CLIENT_URL,
     methodName: "GET, POST, PUT, DELETE",
     credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const CLIENT_URL = process.env.CLIENT_URL
-
-// temp code 
-const sessionMiddleware = session({
-    secret: process.env.MY_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        httpOnly: true, // Prevent JavaScript access
-        secure: true,   // Only sent over HTTPS
-        sameSite: 'none', // Allows cross-site requests
-        maxAge: 24 * 60 * 60 * 1000,
-    }
-});
-// temp
-
-app.use(sessionMiddleware)
-
-//using passport
-app.use(passport.initialize())
-app.use(passport.session())
 
 
-// sending html file on requsting route a genral statement 
-function sendPublicFile(res, fileName) {
-    res.sendFile(path.join(__dirname, 'public', fileName));
-}
-
-// connecting to mongodb 
+// CONNECTING TO THE MONGODB 
 mongoose.connect(process.env.MONGO)
 .then(()=> console.log("Mongodb connected successfully..."))
 .catch(err => {
     console.log(err);
 })
 
+const JWT_SECRET = process.env.JWT_SECRET;
 
-app.get("/", (req, res) => {
-    sendPublicFile(res, "index.html")
-})
-app.get("/login", (req, res) => {
-    sendPublicFile(res, "login.html")
-})
-app.get("/register", (req, res) => {
-    sendPublicFile(res, "register.html")
-})
+// Function to generate JWT
+const generateJWT = (user) => {
+    const payload = { _id: user._id, email: user.email, username: user.username };
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+};
 
-app.get("/auth/google", passport.authenticate("google", {
-    scope: ["profile", "email"],
-}))
-
-app.get("/auth/google/private", passport.authenticate("google", {
-    successRedirect: process.env.CLIENT_URL,
-    failureRedirect: "/login"
-}))
-
-//REGISTER USER
-app.post("/register",async function(req,res){
+// Middleware to authenticate JWT
+const authenticateJWT = (req, res, next) => {
     try {
-        const salt =await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(req.body.password, salt);
-        const newUser = new User({
-            username: req.body.name,
-            email: req.body.username,
-            password: hashedPassword,
-        })
+        const token = req.cookies?.token;
 
-        const user = await newUser.save();
-        req.login(user, (err) => {
-            console.log(err)
-            res.redirect("/private")
-        }) 
-    } catch (err) {
-        res.status(500).json(err);
-        console.log(err);
-    }
-});
-
-
-//LOGIN USER
-app.post("/login", passport.authenticate("local", {
-    successRedirect: process.env.CLIENT_URL,
-    failureRedirect: "/login"
-}))
-
-
-// Private route only available when used has logged in 
-app.get("/private", (req, res) => {
-    if(req.isAuthenticated()){
-        res.status(200).json(req.user);
-    } else {
-        res.status(403).json(null);
-    }
-})
-
-// Test route to set a cookie
-
-app.get('/test', (req, res) => {
-    
- 
-    res.json("test working fine");
-  });
-
-// Route to handle logout
-app.get('/logout', (req, res) => {
-    req.logout((err) => {
-        if (err) {
-            return res.status(500).send('Logout failed');
+        if (!token) {
+            return res.status(401).json({ message: 'Access denied. No token provided.' });
         }
-        req.session.destroy(() => {
-            res.clearCookie('connect.sid', { path: '/', httpOnly: false, secure: true, sameSite: 'lax' });
-            return res.status(200).send('Logged out successfully');
+
+        jwt.verify(token, JWT_SECRET, (err, decoded) => {
+            if (err) {
+                return res.status(403).json({ message: 'Invalid token or token expired.' });
+            }
+
+            req.user = decoded; 
+            next();
         });
-    })
-});
-
-
-// passport varification function local strategy 
-passport.use("local", new Strategy(async function verify(username, password, cb) {
-    try {
-        const user =await User.findOne({email: username});
-        if(!user){
-            return cb("user not found", false);
-        }
-        const validate =await bcrypt.compare(password , user.password);
-        if(!validate) {
-            return cb("password not matching ", false);
-        }
-
-        return cb(null, user)
-    } catch (err) {
-        return cb(err)        
+    } catch (error) {
+        return res.status(500).json({ message: 'Internal server error', error: error.message });
     }
-}))
+};
 
 
-// passport google strategy 
+
+// PASSPORT GOOGLE STRATEGY
 passport.use("google", new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -194,73 +91,86 @@ passport.use("google", new GoogleStrategy({
 })
 )
 
+// GOOGLE OAUTH AUTHENTICATION ROUTE
+app.get("/auth/google", passport.authenticate("google", {
+    scope: ["profile", "email"],
+}))
 
-passport.serializeUser((user, cb) => {
-    cb(null, user);
+// GOOGLE OAUTH CALLBACK ROUTE
+app.get("/auth/google/private", passport.authenticate("google", { session: false}), (req, res) => {
+    const token = generateJWT(req.user);
+
+    res.cookie('token', token, {
+        httpOnly: true, 
+        secure: process.env.PRODUCTION === 'true',  
+        maxAge: 24 * 60 * 60 * 1000, 
+    });
+
+    res.redirect(process.env.CLIENT_URL)
 })
 
-passport.deserializeUser((user, cb) => {
-    cb(null, user);
+// PRIVATE ROUTE 
+app.get("/private", authenticateJWT,  (req, res) => {
+    
+    res.json({
+        message: 'Protected route accessed',
+        user: req.user 
+    });
 })
 
+
+// LOGOUT ROUTE 
+app.post('/logout', (req, res) => {
+    res.clearCookie('token'); 
+    res.json({ message: 'Logged out successfully' });
+});
+
+
+
+// HTTP SERVER
 const PORT = process.env.PORT;
 const server = app.listen(PORT, () => {
-    console.log("server started at port :" + PORT)
+    console.log("Server started at port :" + PORT)
 })
 
-// websocket server 
 
+// WEB-SOCKET SERVER 
 const wss = new WebSocketServer({server});
 
-// wss.on('connection', function connection(ws, req) {
-//   ws.on('error', console.error);
-
-//   ws.on('message', function message(data) {
-//     console.log('received: %s', data);
-//     console.log(req.headers.cookie)
-    
-//   });
-  
-//   ws.send('something');
-
-// });
-
-// temp code
 wss.on('connection', async function connection(ws, req) {
     // Parse cookies from the request
     const cookies = cookie.parse(req.headers.cookie || '');
-    const sid = cookies['connect.sid'];
+    const token = cookies['token']; 
     
-    if (!sid) {
-        ws.send('No session found');
+    if (!token) {
+        ws.send('No token found');
         return ws.close();
     }
 
-    const res = {
-        getHeader: () => null,
-        setHeader: () => null,
-    };
-
-    req.headers.cookie = `connect.sid=${sid}`;
     
-    sessionMiddleware(req, res, () => {
-        passport.initialize()(req, res, () => {
-            passport.session()(req, res, () => {
-                if (req.user) {
-                    addUser(req.user._id, ws)
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            ws.send('Invalid or expired token');
+            return ws.close();
+        }
 
-                    ws.send('Welcome, ' + req.user.username);
-                    ws.on("close", () => {
-                        console.log("socket closing")
-                        exitGame(req.user._id, ws);
-                    })
-                } else {
-                    console.log('User not authenticated');
-                    ws.send(JSON.stringify({
-                        message: 'You are not authenticated'
-                    }));
-                }
+        
+        const user = decoded;  
+
+        if (user) {
+            addUser(user._id, ws); 
+
+            ws.send('Welcome, ' + user.username); 
+            ws.on("close", () => {
+                console.log("socket closing");
+                exitGame(user._id, ws); 
             });
-        });
+        } else {
+            console.log('User not authenticated');
+            ws.send(JSON.stringify({
+                message: 'You are not authenticated'
+            }));
+            return ws.close();
+        }
     });
 });
