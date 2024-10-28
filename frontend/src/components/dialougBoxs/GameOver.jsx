@@ -1,6 +1,6 @@
 import React from 'react'
-import WinnerAnimation from '../animations/WinnerAnimation';
-import LossingAnimation from '../animations/LossingAnimation';
+import ConfettiWin from '../animations/confetti-animation/ConfettiWin';
+import ConfettiLoss from '../animations/confetti-animation/ConfettiLoss';
 
 
 export default function GameOver({isOpen, title, message, onClose, isWinner}) {
@@ -11,7 +11,7 @@ export default function GameOver({isOpen, title, message, onClose, isWinner}) {
         isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
     >
-      {isWinner ? <WinnerAnimation /> : <LossingAnimation />}
+      {isWinner ? <ConfettiWin /> : <ConfettiLoss />}
       {/* Transition dialog box */}
       <div
         className={`relative bg-white rounded-lg shadow-lg max-w-md w-full p-6 mx-4 md:mx-0 transition-all duration-800 transform ${

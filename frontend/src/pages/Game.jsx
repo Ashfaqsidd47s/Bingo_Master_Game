@@ -7,6 +7,8 @@ import StartGame from '../components/StartGame';
 import { useBoard, useGameOver } from '../hooks/useBoard';
 import GameOver from '../components/dialougBoxs/GameOver';
 import { SERVER_URL } from '../utils/messages';
+import ConfettiWin from '../components/animations/confetti-animation/ConfettiWin';
+import ConfettiLoss from '../components/animations/confetti-animation/ConfettiLoss';
 
 
 function Game() {
